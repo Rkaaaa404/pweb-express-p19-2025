@@ -1,0 +1,86 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") 
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String?
+  password  String
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders Order[] // Relation to Orders
+
+  @@map("users")
+}
+
+model Book {
+  id              String   @id @default(uuid())
+  title           String   @unique
+  writer          String
+  publisher       String
+  publicationYear Int      @map("publication_year")
+  description     String?
+  price           Float    // 'number' di dbdiagram jadi Float
+  stockQuantity   Int      @map("stock_quantity")
+
+  genre   Genre  @relation(fields: [genreId], references: [id])
+  genreId String @map("genre_id")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at") // Penting untuk soft delete
+
+  orderItems OrderItem[] // Relation to OrderItems
+
+  @@map("books")
+}
+
+model Genre {
+  id   String @id @default(uuid())
+  name String @unique
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at") // Penting untuk soft delete
+
+  books Book[] // Relation to Books
+
+  @@map("genres")
+}
+
+model Order {
+  id String @id @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orderItems OrderItem[] // Relation to OrderItems
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(uuid())
+  quantity Int
+
+  order   Order  @relation(fields: [orderId], references: [id])
+  orderId String @map("order_id")
+
+  book   Book   @relation(fields: [bookId], references: [id])
+  bookId String @map("book_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("order_items")
+}
