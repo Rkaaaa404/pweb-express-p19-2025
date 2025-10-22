@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prisma'; 
 import { signToken } from '../utils/jwt'; 
 import bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, username } = req.body;
@@ -38,7 +38,7 @@ export const register = async (req: Request, res: Response) => {
     });
   } catch (error) {
     // Error handling buat kalo email-nya udah ada (unique constraint)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
         return res
           .status(400)
