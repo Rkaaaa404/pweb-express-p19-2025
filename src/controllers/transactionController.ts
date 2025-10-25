@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 
 export const createTransaction = async (req: Request, res: Response) => {
   const { items } = req.body;
-  const userId = (req as any).user?.id;
+  const userId = (req as any).userId;
 
   if (!userId) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
