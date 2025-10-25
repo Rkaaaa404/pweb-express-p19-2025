@@ -5,11 +5,48 @@ import { prisma } from '../prisma';
 export const createBook = async (req: Request, res: Response) => {
   const { title, writer, publisher, publication_year, description, price, stock_quantity, genre_id } = req.body;
 
-  // Validasi field yang required
-  if (!title || !writer || !publisher || !publication_year || !price || !stock_quantity || !genre_id) {
+  // Validasi field yang required (cek undefined untuk terima nilai 0)
+  if (!title || !writer || !publisher || publication_year === undefined || price === undefined || stock_quantity === undefined || !genre_id) {
     return res.status(400).json({ 
       success: false, 
       message: 'Title, writer, publisher, publication_year, price, stock_quantity, and genre_id are required' 
+    });
+  }
+
+  // Parse dan validasi tipe data
+  const pubYearNum = parseInt(publication_year as any, 10);
+  const priceNum = parseFloat(price as any);
+  const stockNum = Number(stock_quantity);
+
+  // Validasi numerik
+  if (isNaN(pubYearNum) || isNaN(priceNum) || isNaN(stockNum)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'publication_year, price, and stock_quantity must be numeric' 
+    });
+  }
+
+  // Validasi publication_year tidak boleh lebih dari 2025
+  if (pubYearNum > 2025) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'publication_year cannot be greater than 2025' 
+    });
+  }
+
+  // Validasi price tidak boleh negatif
+  if (priceNum < 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'price cannot be negative' 
+    });
+  }
+
+  // Validasi stock_quantity harus integer dan tidak boleh negatif
+  if (!Number.isInteger(stockNum) || stockNum < 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'stock_quantity must be an integer and cannot be negative' 
     });
   }
 
@@ -43,10 +80,10 @@ export const createBook = async (req: Request, res: Response) => {
         title,
         writer,
         publisher,
-        publicationYear: parseInt(publication_year),
+        publicationYear: pubYearNum,
         description,
-        price: parseFloat(price),
-        stockQuantity: parseInt(stock_quantity),
+        price: priceNum,
+        stockQuantity: stockNum,
         genreId: genre_id,
       },
     });
@@ -278,7 +315,7 @@ export const updateBook = async (req: Request, res: Response) => {
   const { description, price, stock_quantity } = req.body;
 
   // Berdasarkan dokumentasi, hanya bisa edit description, price, dan stock_quantity
-  if (!description && !price && !stock_quantity) {
+  if (description === undefined && price === undefined && stock_quantity === undefined) {
     return res.status(400).json({ 
       success: false, 
       message: 'At least one field (description, price, stock_quantity) is required for update' 
@@ -298,11 +335,55 @@ export const updateBook = async (req: Request, res: Response) => {
       });
     }
 
-    // Prepare data untuk update
+    // Prepare data untuk update dengan validasi
     const updateData: any = {};
-    if (description !== undefined) updateData.description = description; // Allow empty string
-    if (price) updateData.price = parseFloat(price);
-    if (stock_quantity) updateData.stockQuantity = parseInt(stock_quantity);
+    
+    // Validasi description (boleh kosong)
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    
+    // Validasi price
+    if (price !== undefined) {
+      const priceNum = parseFloat(price as any);
+      if (isNaN(priceNum)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'price must be numeric' 
+        });
+      }
+      if (priceNum < 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'price cannot be negative' 
+        });
+      }
+      updateData.price = priceNum;
+    }
+    
+    // Validasi stock_quantity
+    if (stock_quantity !== undefined) {
+      const stockNum = Number(stock_quantity);
+      if (isNaN(stockNum)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'stock_quantity must be numeric' 
+        });
+      }
+      if (!Number.isInteger(stockNum)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'stock_quantity must be an integer (no decimal values allowed)' 
+        });
+      }
+      if (stockNum < 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'stock_quantity cannot be negative' 
+        });
+      }
+      updateData.stockQuantity = stockNum;
+    }
 
     const updatedBook = await prisma.book.update({
       where: { id: id },
