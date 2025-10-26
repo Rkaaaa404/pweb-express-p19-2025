@@ -115,32 +115,45 @@ export const updateGenre = async (req: Request, res: Response) => {
   }
 
   try {
-    const existing = await prisma.genre.findFirst({
-      where: { id, deletedAt: null },
+    const existingGenre = await prisma.genre.findFirst({
+      where: { id },
     });
-    if (!existing) {
+
+    if (!existingGenre) {
       return res.status(404).json({ success: false, message: 'Genre not found' });
     }
 
+    if (existingGenre.name === name) {
+      return res.status(400).json({
+        success: false,
+        message: 'New name is the same as the current name. No update performed.',
+      });
+    }
+
     const duplicateName = await prisma.genre.findFirst({
-      where: { name, id: { not: id }, deletedAt: null },
+      where: { name, id: { not: id }},
     });
+
     if (duplicateName) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Genre name already exists' });
+      return res.status(400).json({
+        success: false,
+        message: 'Genre name already exists',
+      });
     }
 
     const updatedGenre = await prisma.genre.update({
-      where: { id: id },
-      data: { name: name },
+      where: { id },
+      data: { name },
     });
 
-    res
-      .status(200)
-      .json({ success: true, message: 'Genre updated successfully', data: updatedGenre });
+    return res.status(200).json({
+      success: true,
+      message: 'Genre updated successfully',
+      data: updatedGenre,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error('Error updating genre:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
